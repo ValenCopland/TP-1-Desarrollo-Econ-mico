@@ -1,0 +1,1479 @@
+## PUNTO 1 ##
+
+
+library(readr)
+library(tidyverse)
+library(dplyr)
+
+# IMPORTAR TABLAS #
+
+datos2024individual <- usu_individual_T124
+datos2024hogar <- usu_hogar_T124
+
+# FILTRAR DATOS#
+datos2024individualGBA <- datos2024individual[datos2024individual$REGION == 01, ]
+datos2024individualNORO <- datos2024individual[datos2024individual$REGION == 40, ]
+datos2024individualNORE <- datos2024individual[datos2024individual$REGION == 41, ]
+datos2024individualCUYO <- datos2024individual[datos2024individual$REGION == 42, ]
+datos2024individualPAMPA <- datos2024individual[datos2024individual$REGION == 43, ]
+datos2024individualPATAG <- datos2024individual[datos2024individual$REGION == 44, ]
+
+
+# PUNTO 1: CONSTRUIR TABLA QUE COMPARE TODAS LAS REGIONES CON: 
+# Patagonia #
+# a. Proporción de hombres y mujeres.
+
+# Filtramos por una nueva variable#
+datos2024individualPATAG$GENERO <- ifelse(datos2024individualPATAG$CH04 == 1, "Hombre", 
+                                          ifelse(datos2024individualPATAG$CH04 == 2, "Mujer", NA))
+# Seleccionamos solo el genero#
+generoPATAG <- datos2024individualPATAG %>%
+  select(GENERO)
+
+# Creamos tablas necesarias
+tabla_conteogenero_PATAG <- table(generoPATAG$GENERO)
+
+tabla_porcentajegenero_PATAG <- prop.table(tabla_conteogenero_PATAG) * 100
+
+tabla_resultado_generoPATAG <- data.frame(
+  Genero = names(tabla_conteogenero_PATAG),
+  Conteo = as.vector(tabla_conteogenero_PATAG),
+  Porcentaje = round(as.vector(tabla_porcentajegenero_PATAG), 2)
+)
+
+print(tabla_resultado_generoPATAG)
+
+# b. Proporción de individuos analfabetos, mayores a 15 años
+
+# Filtrar las personas que tienen 15 años o más (columna CH06)
+datos_analfabetos_PATAG <- datos2024individualPATAG %>%
+  filter(CH06 >= 15)
+
+# Crear una nueva columna para identificar el estado de alfabetización según CH09
+datos_analfabetos_PATAG$ALFABETIZACION <- ifelse(datos_analfabetos_PATAG$CH09 == 1, "Alfabetizado", 
+                                                 ifelse(datos_analfabetos_PATAG$CH09 == 2, "Analfabeto", NA))
+
+# Creamos tablas necesarias 
+tabla_alfabetizacionPATAG <- table(datos_analfabetos_PATAG$ALFABETIZACION)
+
+
+tabla_porcentajeanalfabetos_PATAG <- prop.table(tabla_alfabetizacionPATAG) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultado_alfabetizacion_PATAG <- data.frame(
+  Estado = names(tabla_alfabetizacionPATAG),
+  Conteo = as.vector(tabla_alfabetizacionPATAG),
+  Porcentaje = round(as.vector(tabla_porcentajeanalfabetos_PATAG), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultado_alfabetizacion_PATAG)
+
+# c. Del universo de individuos de entre 18 y 25 años, proporción de jóvenes que no estudian ni trabajan.
+
+# Filtrar los datos de personas con edades entre 18 y 25 años (columna CH06)
+datos_filtrados_edadPATAG <- datos2024individualPATAG %>%
+  filter(CH06 >= 18 & CH06 <= 25)
+
+# Crear una nueva columna que clasifique si "no estudia ni trabaja" o "otras combinaciones"
+datos_filtrados_edadPATAG$CATEGORIA <- ifelse(
+  (datos_filtrados_edadPATAG$CH10 %in% c(2, 3)) & (datos_filtrados_edadPATAG$ESTADO %in% c(2, 3)),
+  "No estudia ni trabaja", 
+  "Otras combinaciones"
+)
+
+# Crear una tabla de conteo para la columna CATEGORIA
+tabla_no_estudia_ni_trabajaPATAG <- table(datos_filtrados_edadPATAG$CATEGORIA)
+
+# Calcular el porcentaje de cada categoría
+tabla_porcentajeNENTPATAG <- prop.table(tabla_no_estudia_ni_trabajaPATAG) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultadoNENTPATAG <- data.frame(
+  Categoria = names(tabla_no_estudia_ni_trabajaPATAG),
+  Conteo = as.vector(tabla_no_estudia_ni_trabajaPATAG),
+  Porcentaje = round(as.vector(tabla_porcentajeNENTPATAG), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultadoNENTPATAG)
+
+# UNIR LAS 3 TABLAS #
+
+
+# Crear un data frame vacío para la tabla final
+tabla_finalPATAG <- data.frame(
+  Categoria = c("Hombre", "Mujer", "Alfabetizado", "Analfabeto", "No estudia ni trabaja", "Otras combinaciones"),
+  Conteo = NA,   # Inicializa la columna Conteo
+  Porcentaje = NA  # Inicializa la columna Porcentaje
+)
+
+# Asignar conteos y porcentajes para varón y mujer
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Hombre", "Conteo"] <- tabla_resultado_generoPATAG$Conteo[tabla_resultado_generoPATAG$Genero == "Hombre"]
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Mujer", "Conteo"] <- tabla_resultado_generoPATAG$Conteo[tabla_resultado_generoPATAG$Genero == "Mujer"]
+
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Hombre", "Porcentaje"] <- tabla_resultado_generoPATAG$Porcentaje[tabla_resultado_generoPATAG$Genero == "Hombre"]
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Mujer", "Porcentaje"] <- tabla_resultado_generoPATAG$Porcentaje[tabla_resultado_generoPATAG$Genero == "Mujer"]
+
+# Asignar conteos y porcentajes para alfabetizados y analfabetos
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Alfabetizado", "Conteo"] <- tabla_resultado_alfabetizacion_PATAG$Conteo[tabla_resultado_alfabetizacion_PATAG$Estado == "Alfabetizado"]
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Analfabeto", "Conteo"] <- tabla_resultado_alfabetizacion_PATAG$Conteo[tabla_resultado_alfabetizacion_PATAG$Estado == "Analfabeto"]
+
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Alfabetizado", "Porcentaje"] <- tabla_resultado_alfabetizacion_PATAG$Porcentaje[tabla_resultado_alfabetizacion_PATAG$Estado == "Alfabetizado"]
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Analfabeto", "Porcentaje"] <- tabla_resultado_alfabetizacion_PATAG$Porcentaje[tabla_resultado_alfabetizacion_PATAG$Estado == "Analfabeto"]
+
+# Asignar conteos y porcentajes para "no estudia ni trabaja" y "otras combinaciones"
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "No estudia ni trabaja", "Conteo"] <- tabla_resultadoNENTPATAG$Conteo[tabla_resultadoNENTPATAG$Categoria == "No estudia ni trabaja"]
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Otras combinaciones", "Conteo"] <- tabla_resultadoNENTPATAG$Conteo[tabla_resultadoNENTPATAG$Categoria == "Otras combinaciones"]
+
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "No estudia ni trabaja", "Porcentaje"] <- tabla_resultadoNENTPATAG$Porcentaje[tabla_resultadoNENTPATAG$Categoria == "No estudia ni trabaja"]
+tabla_finalPATAG[tabla_finalPATAG$Categoria == "Otras combinaciones", "Porcentaje"] <- tabla_resultadoNENTPATAG$Porcentaje[tabla_resultadoNENTPATAG$Categoria == "Otras combinaciones"]
+
+# Mostrar la tabla final
+
+print(tabla_finalPATAG)
+
+
+
+
+
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_finalPATAG %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Categoría - Patagonia") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Conteo" = 1, "Porcentaje" = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+
+
+
+
+
+
+
+
+
+# PUNTO 1: CONSTRUIR TABLA QUE COMPARE TODAS LAS REGIONES CON: 
+# GBA #
+# a. Proporción de hombres y mujeres.
+
+# Filtramos por una nueva variable#
+datos2024individualGBA$GENERO <- ifelse(datos2024individualGBA$CH04 == 1, "Hombre", 
+                                        ifelse(datos2024individualGBA$CH04 == 2, "Mujer", NA))
+# Seleccionamos solo el genero#
+generoGBA <- datos2024individualGBA %>%
+  select(GENERO)
+
+# Creamos tablas necesarias
+tabla_conteogenero_GBA <- table(generoGBA$GENERO)
+
+tabla_porcentajegenero_GBA <- prop.table(tabla_conteogenero_GBA) * 100
+
+tabla_resultado_generoGBA <- data.frame(
+  Genero = names(tabla_conteogenero_GBA),
+  Conteo = as.vector(tabla_conteogenero_GBA),
+  Porcentaje = round(as.vector(tabla_porcentajegenero_GBA), 2)
+)
+
+print(tabla_resultado_generoGBA)
+
+# b. Proporción de individuos analfabetos, mayores a 15 años
+
+# Filtrar las personas que tienen 15 años o más (columna CH06)
+datos_analfabetos_GBA <- datos2024individualGBA %>%
+  filter(CH06 >= 15)
+
+# Crear una nueva columna para identificar el estado de alfabetización según CH09
+datos_analfabetos_GBA$ALFABETIZACION <- ifelse(datos_analfabetos_GBA$CH09 == 1, "Alfabetizado", 
+                                               ifelse(datos_analfabetos_GBA$CH09 == 2, "Analfabeto", NA))
+
+# Creamos tablas necesarias 
+tabla_alfabetizacionGBA <- table(datos_analfabetos_GBA$ALFABETIZACION)
+
+
+tabla_porcentajeanalfabetos_GBA <- prop.table(tabla_alfabetizacionGBA) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultado_alfabetizacion_GBA <- data.frame(
+  Estado = names(tabla_alfabetizacionGBA),
+  Conteo = as.vector(tabla_alfabetizacionGBA),
+  Porcentaje = round(as.vector(tabla_porcentajeanalfabetos_GBA), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultado_alfabetizacion_GBA)
+
+# c. Del universo de individuos de entre 18 y 25 años, proporción de jóvenes que no estudian ni trabajan.
+
+# Filtrar los datos de personas con edades entre 18 y 25 años (columna CH06)
+datos_filtrados_edadGBA <- datos2024individualGBA %>%
+  filter(CH06 >= 18 & CH06 <= 25)
+
+# Crear una nueva columna que clasifique si "no estudia ni trabaja" o "otras combinaciones"
+datos_filtrados_edadGBA$CATEGORIA <- ifelse(
+  (datos_filtrados_edadGBA$CH10 %in% c(2, 3)) & (datos_filtrados_edadGBA$ESTADO %in% c(2, 3)),
+  "No estudia ni trabaja", 
+  "Otras combinaciones"
+)
+
+# Crear una tabla de conteo para la columna CATEGORIA
+tabla_no_estudia_ni_trabajaGBA <- table(datos_filtrados_edadGBA$CATEGORIA)
+
+# Calcular el porcentaje de cada categoría
+tabla_porcentajeNENTGBA <- prop.table(tabla_no_estudia_ni_trabajaGBA) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultadoNENTGBA <- data.frame(
+  Categoria = names(tabla_no_estudia_ni_trabajaGBA),
+  Conteo = as.vector(tabla_no_estudia_ni_trabajaGBA),
+  Porcentaje = round(as.vector(tabla_porcentajeNENTGBA), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultadoNENTGBA)
+
+# UNIR LAS 3 TABLAS #
+
+
+# Crear un data frame vacío para la tabla final
+tabla_finalGBA <- data.frame(
+  Categoria = c("Hombre", "Mujer", "Alfabetizado", "Analfabeto", "No estudia ni trabaja", "Otras combinaciones"),
+  Conteo = NA,   # Inicializa la columna Conteo
+  Porcentaje = NA  # Inicializa la columna Porcentaje
+)
+
+# Asignar conteos y porcentajes para varón y mujer
+tabla_finalGBA[tabla_finalGBA$Categoria == "Hombre", "Conteo"] <- tabla_resultado_generoGBA$Conteo[tabla_resultado_generoGBA$Genero == "Hombre"]
+tabla_finalGBA[tabla_finalGBA$Categoria == "Mujer", "Conteo"] <- tabla_resultado_generoGBA$Conteo[tabla_resultado_generoGBA$Genero == "Mujer"]
+
+tabla_finalGBA[tabla_finalGBA$Categoria == "Hombre", "Porcentaje"] <- tabla_resultado_generoGBA$Porcentaje[tabla_resultado_generoGBA$Genero == "Hombre"]
+tabla_finalGBA[tabla_finalGBA$Categoria == "Mujer", "Porcentaje"] <- tabla_resultado_generoGBA$Porcentaje[tabla_resultado_generoGBA$Genero == "Mujer"]
+
+# Asignar conteos y porcentajes para alfabetizados y analfabetos
+tabla_finalGBA[tabla_finalGBA$Categoria == "Alfabetizado", "Conteo"] <- tabla_resultado_alfabetizacion_GBA$Conteo[tabla_resultado_alfabetizacion_GBA$Estado == "Alfabetizado"]
+tabla_finalGBA[tabla_finalGBA$Categoria == "Analfabeto", "Conteo"] <- tabla_resultado_alfabetizacion_GBA$Conteo[tabla_resultado_alfabetizacion_GBA$Estado == "Analfabeto"]
+
+tabla_finalGBA[tabla_finalGBA$Categoria == "Alfabetizado", "Porcentaje"] <- tabla_resultado_alfabetizacion_GBA$Porcentaje[tabla_resultado_alfabetizacion_GBA$Estado == "Alfabetizado"]
+tabla_finalGBA[tabla_finalGBA$Categoria == "Analfabeto", "Porcentaje"] <- tabla_resultado_alfabetizacion_GBA$Porcentaje[tabla_resultado_alfabetizacion_GBA$Estado == "Analfabeto"]
+
+# Asignar conteos y porcentajes para "no estudia ni trabaja" y "otras combinaciones"
+tabla_finalGBA[tabla_finalGBA$Categoria == "No estudia ni trabaja", "Conteo"] <- tabla_resultadoNENTGBA$Conteo[tabla_resultadoNENTGBA$Categoria == "No estudia ni trabaja"]
+tabla_finalGBA[tabla_finalGBA$Categoria == "Otras combinaciones", "Conteo"] <- tabla_resultadoNENTGBA$Conteo[tabla_resultadoNENTGBA$Categoria == "Otras combinaciones"]
+
+tabla_finalGBA[tabla_finalGBA$Categoria == "No estudia ni trabaja", "Porcentaje"] <- tabla_resultadoNENTGBA$Porcentaje[tabla_resultadoNENTGBA$Categoria == "No estudia ni trabaja"]
+tabla_finalGBA[tabla_finalGBA$Categoria == "Otras combinaciones", "Porcentaje"] <- tabla_resultadoNENTGBA$Porcentaje[tabla_resultadoNENTGBA$Categoria == "Otras combinaciones"]
+
+# Mostrar la tabla final
+
+print(tabla_finalGBA)
+
+
+
+
+
+
+install.packages("kableExtra")
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_finalGBA %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Categoría - PBA") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Conteo" = 1, "Porcentaje" = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+
+# IMPORTAR TABLAS #
+
+datos2024individual <- usu_individual_T124
+datos2024hogar <- usu_hogar_T124
+
+# FILTRAR DATOS#
+datos2024individualCUYO <- datos2024individual[datos2024individual$REGION == 01, ]
+datos2024individualNORO <- datos2024individual[datos2024individual$REGION == 40, ]
+datos2024individualNORE <- datos2024individual[datos2024individual$REGION == 41, ]
+datos2024individualCUYO <- datos2024individual[datos2024individual$REGION == 42, ]
+datos2024individualPAMPA <- datos2024individual[datos2024individual$REGION == 43, ]
+datos2024individualCUYO <- datos2024individual[datos2024individual$REGION == 44, ]
+
+
+# PUNTO 1: CONSTRUIR TABLA QUE COMPARE TODAS LAS REGIONES CON: 
+# Cuyo #
+# a. Proporción de hombres y mujeres.
+
+# Filtramos por una nueva variable#
+datos2024individualCUYO$GENERO <- ifelse(datos2024individualCUYO$CH04 == 1, "Hombre", 
+                                         ifelse(datos2024individualCUYO$CH04 == 2, "Mujer", NA))
+# Seleccionamos solo el genero#
+generoCUYO <- datos2024individualCUYO %>%
+  select(GENERO)
+
+# Creamos tablas necesarias
+tabla_conteogenero_CUYO <- table(generoCUYO$GENERO)
+
+tabla_porcentajegenero_CUYO <- prop.table(tabla_conteogenero_CUYO) * 100
+
+tabla_resultado_generoCUYO <- data.frame(
+  Genero = names(tabla_conteogenero_CUYO),
+  Conteo = as.vector(tabla_conteogenero_CUYO),
+  Porcentaje = round(as.vector(tabla_porcentajegenero_CUYO), 2)
+)
+
+print(tabla_resultado_generoCUYO)
+
+# b. Proporción de individuos analfabetos, mayores a 15 años
+
+# Filtrar las personas que tienen 15 años o más (columna CH06)
+datos_analfabetos_CUYO <- datos2024individualCUYO %>%
+  filter(CH06 >= 15)
+
+# Crear una nueva columna para identificar el estado de alfabetización según CH09
+datos_analfabetos_CUYO$ALFABETIZACION <- ifelse(datos_analfabetos_CUYO$CH09 == 1, "Alfabetizado", 
+                                                ifelse(datos_analfabetos_CUYO$CH09 == 2, "Analfabeto", NA))
+
+# Creamos tablas necesarias 
+tabla_alfabetizacionCUYO <- table(datos_analfabetos_CUYO$ALFABETIZACION)
+
+
+tabla_porcentajeanalfabetos_CUYO <- prop.table(tabla_alfabetizacionCUYO) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultado_alfabetizacion_CUYO <- data.frame(
+  Estado = names(tabla_alfabetizacionCUYO),
+  Conteo = as.vector(tabla_alfabetizacionCUYO),
+  Porcentaje = round(as.vector(tabla_porcentajeanalfabetos_CUYO), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultado_alfabetizacion_CUYO)
+
+# c. Del universo de individuos de entre 18 y 25 años, proporción de jóvenes que no estudian ni trabajan.
+
+# Filtrar los datos de personas con edades entre 18 y 25 años (columna CH06)
+datos_filtrados_edadCUYO <- datos2024individualCUYO %>%
+  filter(CH06 >= 18 & CH06 <= 25)
+
+# Crear una nueva columna que clasifique si "no estudia ni trabaja" o "otras combinaciones"
+datos_filtrados_edadCUYO$CATEGORIA <- ifelse(
+  (datos_filtrados_edadCUYO$CH10 %in% c(2, 3)) & (datos_filtrados_edadCUYO$ESTADO %in% c(2, 3)),
+  "No estudia ni trabaja", 
+  "Otras combinaciones"
+)
+
+# Crear una tabla de conteo para la columna CATEGORIA
+tabla_no_estudia_ni_trabajaCUYO <- table(datos_filtrados_edadCUYO$CATEGORIA)
+
+# Calcular el porcentaje de cada categoría
+tabla_porcentajeNENTCUYO <- prop.table(tabla_no_estudia_ni_trabajaCUYO) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultadoNENTCUYO <- data.frame(
+  Categoria = names(tabla_no_estudia_ni_trabajaCUYO),
+  Conteo = as.vector(tabla_no_estudia_ni_trabajaCUYO),
+  Porcentaje = round(as.vector(tabla_porcentajeNENTCUYO), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultadoNENTCUYO)
+
+# UNIR LAS 3 TABLAS #
+
+# Crear un data frame vacío para la tabla final
+tabla_finalCUYO <- data.frame(
+  Categoria = c("Hombre", "Mujer", "Alfabetizado", "Analfabeto", "No estudia ni trabaja", "Otras combinaciones"),
+  Conteo = NA,   # Inicializa la columna Conteo
+  Porcentaje = NA  # Inicializa la columna Porcentaje
+)
+
+# Asignar conteos y porcentajes para varón y mujer
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Hombre", "Conteo"] <- tabla_resultado_generoCUYO$Conteo[tabla_resultado_generoCUYO$Genero == "Hombre"]
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Mujer", "Conteo"] <- tabla_resultado_generoCUYO$Conteo[tabla_resultado_generoCUYO$Genero == "Mujer"]
+
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Hombre", "Porcentaje"] <- tabla_resultado_generoCUYO$Porcentaje[tabla_resultado_generoCUYO$Genero == "Hombre"]
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Mujer", "Porcentaje"] <- tabla_resultado_generoCUYO$Porcentaje[tabla_resultado_generoCUYO$Genero == "Mujer"]
+
+# Asignar conteos y porcentajes para alfabetizados y analfabetos
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Alfabetizado", "Conteo"] <- tabla_resultado_alfabetizacion_CUYO$Conteo[tabla_resultado_alfabetizacion_CUYO$Estado == "Alfabetizado"]
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Analfabeto", "Conteo"] <- tabla_resultado_alfabetizacion_CUYO$Conteo[tabla_resultado_alfabetizacion_CUYO$Estado == "Analfabeto"]
+
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Alfabetizado", "Porcentaje"] <- tabla_resultado_alfabetizacion_CUYO$Porcentaje[tabla_resultado_alfabetizacion_CUYO$Estado == "Alfabetizado"]
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Analfabeto", "Porcentaje"] <- tabla_resultado_alfabetizacion_CUYO$Porcentaje[tabla_resultado_alfabetizacion_CUYO$Estado == "Analfabeto"]
+
+# Asignar conteos y porcentajes para "no estudia ni trabaja" y "otras combinaciones"
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "No estudia ni trabaja", "Conteo"] <- tabla_resultadoNENTCUYO$Conteo[tabla_resultadoNENTCUYO$Categoria == "No estudia ni trabaja"]
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Otras combinaciones", "Conteo"] <- tabla_resultadoNENTCUYO$Conteo[tabla_resultadoNENTCUYO$Categoria == "Otras combinaciones"]
+
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "No estudia ni trabaja", "Porcentaje"] <- tabla_resultadoNENTCUYO$Porcentaje[tabla_resultadoNENTCUYO$Categoria == "No estudia ni trabaja"]
+tabla_finalCUYO[tabla_finalCUYO$Categoria == "Otras combinaciones", "Porcentaje"] <- tabla_resultadoNENTCUYO$Porcentaje[tabla_resultadoNENTCUYO$Categoria == "Otras combinaciones"]
+
+# Mostrar la tabla final
+print(tabla_finalCUYO)
+
+
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_finalCUYO %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Categoría - Cuyo") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Conteo" = 1, "Porcentaje" = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+
+# PUNTO 1: CONSTRUIR TABLA QUE COMPARE TODAS LAS REGIONES CON: 
+# Noroeste #
+# a. Proporción de hombres y mujeres.
+
+# Filtramos por una nueva variable#
+datos2024individualNORO$GENERO <- ifelse(datos2024individualNORO$CH04 == 1, "Hombre", 
+                                         ifelse(datos2024individualNORO$CH04 == 2, "Mujer", NA))
+# Seleccionamos solo el genero#
+generoNORO <- datos2024individualNORO %>%
+  select(GENERO)
+
+# Creamos tablas necesarias
+tabla_conteogenero_NORO <- table(generoNORO$GENERO)
+
+tabla_porcentajegenero_NORO <- prop.table(tabla_conteogenero_NORO) * 100
+
+tabla_resultado_generoNORO <- data.frame(
+  Genero = names(tabla_conteogenero_NORO),
+  Conteo = as.vector(tabla_conteogenero_NORO),
+  Porcentaje = round(as.vector(tabla_porcentajegenero_NORO), 2)
+)
+
+print(tabla_resultado_generoNORO)
+
+# b. Proporción de individuos analfabetos, mayores a 15 años
+
+# Filtrar las personas que tienen 15 años o más (columna CH06)
+datos_analfabetos_NORO <- datos2024individualNORO %>%
+  filter(CH06 >= 15)
+
+# Crear una nueva columna para identificar el estado de alfabetización según CH09
+datos_analfabetos_NORO$ALFABETIZACION <- ifelse(datos_analfabetos_NORO$CH09 == 1, "Alfabetizado", 
+                                                ifelse(datos_analfabetos_NORO$CH09 == 2, "Analfabeto", NA))
+
+# Creamos tablas necesarias 
+tabla_alfabetizacionNORO <- table(datos_analfabetos_NORO$ALFABETIZACION)
+
+tabla_porcentajeanalfabetos_NORO <- prop.table(tabla_alfabetizacionNORO) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultado_alfabetizacion_NORO <- data.frame(
+  Estado = names(tabla_alfabetizacionNORO),
+  Conteo = as.vector(tabla_alfabetizacionNORO),
+  Porcentaje = round(as.vector(tabla_porcentajeanalfabetos_NORO), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultado_alfabetizacion_NORO)
+
+# c. Del universo de individuos de entre 18 y 25 años, proporción de jóvenes que no estudian ni trabajan.
+
+# Filtrar los datos de personas con edades entre 18 y 25 años (columna CH06)
+datos_filtrados_edadNORO <- datos2024individualNORO %>%
+  filter(CH06 >= 18 & CH06 <= 25)
+
+# Crear una nueva columna que clasifique si "no estudia ni trabaja" o "otras combinaciones"
+datos_filtrados_edadNORO$CATEGORIA <- ifelse(
+  (datos_filtrados_edadNORO$CH10 %in% c(2, 3)) & (datos_filtrados_edadNORO$ESTADO %in% c(2, 3)),
+  "No estudia ni trabaja", 
+  "Otras combinaciones"
+)
+
+# Crear una tabla de conteo para la columna CATEGORIA
+tabla_no_estudia_ni_trabajaNORO <- table(datos_filtrados_edadNORO$CATEGORIA)
+
+# Calcular el porcentaje de cada categoría
+tabla_porcentajeNENTNORO <- prop.table(tabla_no_estudia_ni_trabajaNORO) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultadoNENTNORO <- data.frame(
+  Categoria = names(tabla_no_estudia_ni_trabajaNORO),
+  Conteo = as.vector(tabla_no_estudia_ni_trabajaNORO),
+  Porcentaje = round(as.vector(tabla_porcentajeNENTNORO), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultadoNENTNORO)
+
+# UNIR LAS 3 TABLAS #
+
+# Crear un data frame vacío para la tabla final
+tabla_finalNORO <- data.frame(
+  Categoria = c("Hombre", "Mujer", "Alfabetizado", "Analfabeto", "No estudia ni trabaja", "Otras combinaciones"),
+  Conteo = NA,   # Inicializa la columna Conteo
+  Porcentaje = NA  # Inicializa la columna Porcentaje
+)
+
+# Asignar conteos y porcentajes para varón y mujer
+tabla_finalNORO[tabla_finalNORO$Categoria == "Hombre", "Conteo"] <- tabla_resultado_generoNORO$Conteo[tabla_resultado_generoNORO$Genero == "Hombre"]
+tabla_finalNORO[tabla_finalNORO$Categoria == "Mujer", "Conteo"] <- tabla_resultado_generoNORO$Conteo[tabla_resultado_generoNORO$Genero == "Mujer"]
+
+tabla_finalNORO[tabla_finalNORO$Categoria == "Hombre", "Porcentaje"] <- tabla_resultado_generoNORO$Porcentaje[tabla_resultado_generoNORO$Genero == "Hombre"]
+tabla_finalNORO[tabla_finalNORO$Categoria == "Mujer", "Porcentaje"] <- tabla_resultado_generoNORO$Porcentaje[tabla_resultado_generoNORO$Genero == "Mujer"]
+
+# Asignar conteos y porcentajes para alfabetizados y analfabetos
+tabla_finalNORO[tabla_finalNORO$Categoria == "Alfabetizado", "Conteo"] <- tabla_resultado_alfabetizacion_NORO$Conteo[tabla_resultado_alfabetizacion_NORO$Estado == "Alfabetizado"]
+tabla_finalNORO[tabla_finalNORO$Categoria == "Analfabeto", "Conteo"] <- tabla_resultado_alfabetizacion_NORO$Conteo[tabla_resultado_alfabetizacion_NORO$Estado == "Analfabeto"]
+
+tabla_finalNORO[tabla_finalNORO$Categoria == "Alfabetizado", "Porcentaje"] <- tabla_resultado_alfabetizacion_NORO$Porcentaje[tabla_resultado_alfabetizacion_NORO$Estado == "Alfabetizado"]
+tabla_finalNORO[tabla_finalNORO$Categoria == "Analfabeto", "Porcentaje"] <- tabla_resultado_alfabetizacion_NORO$Porcentaje[tabla_resultado_alfabetizacion_NORO$Estado == "Analfabeto"]
+
+# Asignar conteos y porcentajes para "no estudia ni trabaja" y "otras combinaciones"
+tabla_finalNORO[tabla_finalNORO$Categoria == "No estudia ni trabaja", "Conteo"] <- tabla_resultadoNENTNORO$Conteo[tabla_resultadoNENTNORO$Categoria == "No estudia ni trabaja"]
+tabla_finalNORO[tabla_finalNORO$Categoria == "Otras combinaciones", "Conteo"] <- tabla_resultadoNENTNORO$Conteo[tabla_resultadoNENTNORO$Categoria == "Otras combinaciones"]
+
+tabla_finalNORO[tabla_finalNORO$Categoria == "No estudia ni trabaja", "Porcentaje"] <- tabla_resultadoNENTNORO$Porcentaje[tabla_resultadoNENTNORO$Categoria == "No estudia ni trabaja"]
+tabla_finalNORO[tabla_finalNORO$Categoria == "Otras combinaciones", "Porcentaje"] <- tabla_resultadoNENTNORO$Porcentaje[tabla_resultadoNENTNORO$Categoria == "Otras combinaciones"]
+
+# Mostrar la tabla final
+
+print(tabla_finalNORO)
+
+
+
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_finalNORO %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Categoría - Noroeste") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Conteo" = 1, "Porcentaje" = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+
+
+
+
+
+# PUNTO 1: CONSTRUIR TABLA QUE COMPARE TODAS LAS REGIONES CON: 
+# Noreste #
+# a. Proporción de hombres y mujeres.
+
+# Filtramos por una nueva variable#
+datos2024individualNORE$GENERO <- ifelse(datos2024individualNORE$CH04 == 1, "Hombre", 
+                                         ifelse(datos2024individualNORE$CH04 == 2, "Mujer", NA))
+# Seleccionamos solo el genero#
+generoNORE <- datos2024individualNORE %>%
+  select(GENERO)
+
+# Creamos tablas necesarias
+tabla_conteogenero_NORE <- table(generoNORE$GENERO)
+
+tabla_porcentajegenero_NORE <- prop.table(tabla_conteogenero_NORE) * 100
+
+tabla_resultado_generoNORE <- data.frame(
+  Genero = names(tabla_conteogenero_NORE),
+  Conteo = as.vector(tabla_conteogenero_NORE),
+  Porcentaje = round(as.vector(tabla_porcentajegenero_NORE), 2)
+)
+
+print(tabla_resultado_generoNORE)
+
+# b. Proporción de individuos analfabetos, mayores a 15 años
+
+# Filtrar las personas que tienen 15 años o más (columna CH06)
+datos_analfabetos_NORE <- datos2024individualNORE %>%
+  filter(CH06 >= 15)
+
+# Crear una nueva columna para identificar el estado de alfabetización según CH09
+datos_analfabetos_NORE$ALFABETIZACION <- ifelse(datos_analfabetos_NORE$CH09 == 1, "Alfabetizado", 
+                                                ifelse(datos_analfabetos_NORE$CH09 == 2, "Analfabeto", NA))
+
+# Creamos tablas necesarias 
+tabla_alfabetizacionNORE <- table(datos_analfabetos_NORE$ALFABETIZACION)
+
+tabla_porcentajeanalfabetos_NORE <- prop.table(tabla_alfabetizacionNORE) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultado_alfabetizacion_NORE <- data.frame(
+  Estado = names(tabla_alfabetizacionNORE),
+  Conteo = as.vector(tabla_alfabetizacionNORE),
+  Porcentaje = round(as.vector(tabla_porcentajeanalfabetos_NORE), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultado_alfabetizacion_NORE)
+
+# c. Del universo de individuos de entre 18 y 25 años, proporción de jóvenes que no estudian ni trabajan.
+
+# Filtrar los datos de personas con edades entre 18 y 25 años (columna CH06)
+datos_filtrados_edadNORE <- datos2024individualNORE %>%
+  filter(CH06 >= 18 & CH06 <= 25)
+
+# Crear una nueva columna que clasifique si "no estudia ni trabaja" o "otras combinaciones"
+datos_filtrados_edadNORE$CATEGORIA <- ifelse(
+  (datos_filtrados_edadNORE$CH10 %in% c(2, 3)) & (datos_filtrados_edadNORE$ESTADO %in% c(2, 3)),
+  "No estudia ni trabaja", 
+  "Otras combinaciones"
+)
+
+# Crear una tabla de conteo para la columna CATEGORIA
+tabla_no_estudia_ni_trabajaNORE <- table(datos_filtrados_edadNORE$CATEGORIA)
+
+# Calcular el porcentaje de cada categoría
+tabla_porcentajeNENTNORE <- prop.table(tabla_no_estudia_ni_trabajaNORE) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultadoNENTNORE <- data.frame(
+  Categoria = names(tabla_no_estudia_ni_trabajaNORE),
+  Conteo = as.vector(tabla_no_estudia_ni_trabajaNORE),
+  Porcentaje = round(as.vector(tabla_porcentajeNENTNORE), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultadoNENTNORE)
+
+# UNIR LAS 3 TABLAS #
+
+# Crear un data frame vacío para la tabla final
+tabla_finalNORE <- data.frame(
+  Categoria = c("Hombre", "Mujer", "Alfabetizado", "Analfabeto", "No estudia ni trabaja", "Otras combinaciones"),
+  Conteo = NA,   # Inicializa la columna Conteo
+  Porcentaje = NA  # Inicializa la columna Porcentaje
+)
+
+# Asignar conteos y porcentajes para varón y mujer
+tabla_finalNORE[tabla_finalNORE$Categoria == "Hombre", "Conteo"] <- tabla_resultado_generoNORE$Conteo[tabla_resultado_generoNORE$Genero == "Hombre"]
+tabla_finalNORE[tabla_finalNORE$Categoria == "Mujer", "Conteo"] <- tabla_resultado_generoNORE$Conteo[tabla_resultado_generoNORE$Genero == "Mujer"]
+
+tabla_finalNORE[tabla_finalNORE$Categoria == "Hombre", "Porcentaje"] <- tabla_resultado_generoNORE$Porcentaje[tabla_resultado_generoNORE$Genero == "Hombre"]
+tabla_finalNORE[tabla_finalNORE$Categoria == "Mujer", "Porcentaje"] <- tabla_resultado_generoNORE$Porcentaje[tabla_resultado_generoNORE$Genero == "Mujer"]
+
+# Asignar conteos y porcentajes para alfabetizados y analfabetos
+tabla_finalNORE[tabla_finalNORE$Categoria == "Alfabetizado", "Conteo"] <- tabla_resultado_alfabetizacion_NORE$Conteo[tabla_resultado_alfabetizacion_NORE$Estado == "Alfabetizado"]
+tabla_finalNORE[tabla_finalNORE$Categoria == "Analfabeto", "Conteo"] <- tabla_resultado_alfabetizacion_NORE$Conteo[tabla_resultado_alfabetizacion_NORE$Estado == "Analfabeto"]
+
+tabla_finalNORE[tabla_finalNORE$Categoria == "Alfabetizado", "Porcentaje"] <- tabla_resultado_alfabetizacion_NORE$Porcentaje[tabla_resultado_alfabetizacion_NORE$Estado == "Alfabetizado"]
+tabla_finalNORE[tabla_finalNORE$Categoria == "Analfabeto", "Porcentaje"] <- tabla_resultado_alfabetizacion_NORE$Porcentaje[tabla_resultado_alfabetizacion_NORE$Estado == "Analfabeto"]
+
+# Asignar conteos y porcentajes para "no estudia ni trabaja" y "otras combinaciones"
+tabla_finalNORE[tabla_finalNORE$Categoria == "No estudia ni trabaja", "Conteo"] <- tabla_resultadoNENTNORE$Conteo[tabla_resultadoNENTNORE$Categoria == "No estudia ni trabaja"]
+tabla_finalNORE[tabla_finalNORE$Categoria == "Otras combinaciones", "Conteo"] <- tabla_resultadoNENTNORE$Conteo[tabla_resultadoNENTNORE$Categoria == "Otras combinaciones"]
+
+tabla_finalNORE[tabla_finalNORE$Categoria == "No estudia ni trabaja", "Porcentaje"] <- tabla_resultadoNENTNORE$Porcentaje[tabla_resultadoNENTNORE$Categoria == "No estudia ni trabaja"]
+tabla_finalNORE[tabla_finalNORE$Categoria == "Otras combinaciones", "Porcentaje"] <- tabla_resultadoNENTNORE$Porcentaje[tabla_resultadoNENTNORE$Categoria == "Otras combinaciones"]
+
+# Mostrar la tabla final
+print(tabla_finalNORE)
+
+
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_finalNORE %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Categoría - Noreste") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Conteo" = 1, "Porcentaje" = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+
+# PUNTO 1: CONSTRUIR TABLA QUE COMPARE TODAS LAS REGIONES CON: 
+# Pampa #
+# a. Proporción de hombres y mujeres.
+
+# Filtramos por una nueva variable#
+datos2024individualPAMPA$GENERO <- ifelse(datos2024individualPAMPA$CH04 == 1, "Hombre", 
+                                          ifelse(datos2024individualPAMPA$CH04 == 2, "Mujer", NA))
+# Seleccionamos solo el genero#
+generoPAMPA <- datos2024individualPAMPA %>%
+  select(GENERO)
+
+# Creamos tablas necesarias
+tabla_conteogenero_PAMPA <- table(generoPAMPA$GENERO)
+
+tabla_porcentajegenero_PAMPA <- prop.table(tabla_conteogenero_PAMPA) * 100
+
+tabla_resultado_generoPAMPA <- data.frame(
+  Genero = names(tabla_conteogenero_PAMPA),
+  Conteo = as.vector(tabla_conteogenero_PAMPA),
+  Porcentaje = round(as.vector(tabla_porcentajegenero_PAMPA), 2)
+)
+
+print(tabla_resultado_generoPAMPA)
+
+# b. Proporción de individuos analfabetos, mayores a 15 años
+
+# Filtrar las personas que tienen 15 años o más (columna CH06)
+datos_analfabetos_PAMPA <- datos2024individualPAMPA %>%
+  filter(CH06 >= 15)
+
+# Crear una nueva columna para identificar el estado de alfabetización según CH09
+datos_analfabetos_PAMPA$ALFABETIZACION <- ifelse(datos_analfabetos_PAMPA$CH09 == 1, "Alfabetizado", 
+                                                 ifelse(datos_analfabetos_PAMPA$CH09 == 2, "Analfabeto", NA))
+
+# Creamos tablas necesarias 
+tabla_alfabetizacionPAMPA <- table(datos_analfabetos_PAMPA$ALFABETIZACION)
+
+tabla_porcentajeanalfabetos_PAMPA <- prop.table(tabla_alfabetizacionPAMPA) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultado_alfabetizacion_PAMPA <- data.frame(
+  Estado = names(tabla_alfabetizacionPAMPA),
+  Conteo = as.vector(tabla_alfabetizacionPAMPA),
+  Porcentaje = round(as.vector(tabla_porcentajeanalfabetos_PAMPA), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultado_alfabetizacion_PAMPA)
+
+# c. Del universo de individuos de entre 18 y 25 años, proporción de jóvenes que no estudian ni trabajan.
+
+# Filtrar los datos de personas con edades entre 18 y 25 años (columna CH06)
+datos_filtrados_edadPAMPA <- datos2024individualPAMPA %>%
+  filter(CH06 >= 18 & CH06 <= 25)
+
+# Crear una nueva columna que clasifique si "no estudia ni trabaja" o "otras combinaciones"
+datos_filtrados_edadPAMPA$CATEGORIA <- ifelse(
+  (datos_filtrados_edadPAMPA$CH10 %in% c(2, 3)) & (datos_filtrados_edadPAMPA$ESTADO %in% c(2, 3)),
+  "No estudia ni trabaja", 
+  "Otras combinaciones"
+)
+
+# Crear una tabla de conteo para la columna CATEGORIA
+tabla_no_estudia_ni_trabajaPAMPA <- table(datos_filtrados_edadPAMPA$CATEGORIA)
+
+# Calcular el porcentaje de cada categoría
+tabla_porcentajeNENTPAMPA <- prop.table(tabla_no_estudia_ni_trabajaPAMPA) * 100
+
+# Combinar los resultados en un data frame
+tabla_resultadoNENTPAMPA <- data.frame(
+  Categoria = names(tabla_no_estudia_ni_trabajaPAMPA),
+  Conteo = as.vector(tabla_no_estudia_ni_trabajaPAMPA),
+  Porcentaje = round(as.vector(tabla_porcentajeNENTPAMPA), 2)
+)
+
+# Mostrar la tabla final
+print(tabla_resultadoNENTPAMPA)
+
+# UNIR LAS 3 TABLAS #
+
+# Crear un data frame vacío para la tabla final
+tabla_finalPAMPA <- data.frame(
+  Categoria = c("Hombre", "Mujer", "Alfabetizado", "Analfabeto", "No estudia ni trabaja", "Otras combinaciones"),
+  Conteo = NA,   # Inicializa la columna Conteo
+  Porcentaje = NA  # Inicializa la columna Porcentaje
+)
+
+# Asignar conteos y porcentajes para varón y mujer
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Hombre", "Conteo"] <- tabla_resultado_generoPAMPA$Conteo[tabla_resultado_generoPAMPA$Genero == "Hombre"]
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Mujer", "Conteo"] <- tabla_resultado_generoPAMPA$Conteo[tabla_resultado_generoPAMPA$Genero == "Mujer"]
+
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Hombre", "Porcentaje"] <- tabla_resultado_generoPAMPA$Porcentaje[tabla_resultado_generoPAMPA$Genero == "Hombre"]
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Mujer", "Porcentaje"] <- tabla_resultado_generoPAMPA$Porcentaje[tabla_resultado_generoPAMPA$Genero == "Mujer"]
+
+# Asignar conteos y porcentajes para alfabetizados y analfabetos
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Alfabetizado", "Conteo"] <- tabla_resultado_alfabetizacion_PAMPA$Conteo[tabla_resultado_alfabetizacion_PAMPA$Estado == "Alfabetizado"]
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Analfabeto", "Conteo"] <- tabla_resultado_alfabetizacion_PAMPA$Conteo[tabla_resultado_alfabetizacion_PAMPA$Estado == "Analfabeto"]
+
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Alfabetizado", "Porcentaje"] <- tabla_resultado_alfabetizacion_PAMPA$Porcentaje[tabla_resultado_alfabetizacion_PAMPA$Estado == "Alfabetizado"]
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Analfabeto", "Porcentaje"] <- tabla_resultado_alfabetizacion_PAMPA$Porcentaje[tabla_resultado_alfabetizacion_PAMPA$Estado == "Analfabeto"]
+
+# Asignar conteos y porcentajes para "no estudia ni trabaja" y "otras combinaciones"
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "No estudia ni trabaja", "Conteo"] <- tabla_resultadoNENTPAMPA$Conteo[tabla_resultadoNENTPAMPA$Categoria == "No estudia ni trabaja"]
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Otras combinaciones", "Conteo"] <- tabla_resultadoNENTPAMPA$Conteo[tabla_resultadoNENTPAMPA$Categoria == "Otras combinaciones"]
+
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "No estudia ni trabaja", "Porcentaje"] <- tabla_resultadoNENTPAMPA$Porcentaje[tabla_resultadoNENTPAMPA$Categoria == "No estudia ni trabaja"]
+tabla_finalPAMPA[tabla_finalPAMPA$Categoria == "Otras combinaciones", "Porcentaje"] <- tabla_resultadoNENTPAMPA$Porcentaje[tabla_resultadoNENTPAMPA$Categoria == "Otras combinaciones"]
+
+# Mostrar la tabla final
+print(tabla_finalPAMPA)
+
+
+install.packages("kableExtra")
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_finalPAMPA %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Categoría - Pampa") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Conteo" = 1, "Porcentaje" = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+
+
+
+
+
+# Crear una nueva columna para identificar las regiones
+tabla_finalGBA$Region <- "GBA"
+tabla_finalNORO$Region <- "NORO"
+tabla_finalNORE$Region <- "NORE"
+tabla_finalCUYO$Region <- "CUYO"
+tabla_finalPAMPA$Region <- "PAMPA"
+tabla_finalPATAG$Region <- "PATAG"
+
+# Unir todas las tablas
+tabla_final_unificada <- rbind(tabla_finalGBA, 
+                               tabla_finalNORO, 
+                               tabla_finalNORE, 
+                               tabla_finalCUYO, 
+                               tabla_finalPAMPA, 
+                               tabla_finalPATAG)
+
+# Reordenar las columnas para que la nueva columna "Region" esté al principio
+tabla_final_unificada <- tabla_final_unificada[, c("Region", "Categoria", "Conteo", "Porcentaje")]
+
+# Mostrar la tabla final unificada
+print(tabla_final_unificada)
+
+# Para visualizar la tabla de manera más atractiva
+library(kableExtra)
+
+# Crear una tabla utilizando kable
+tabla_final_unificada %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Región y Categoría") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c("Region" = 1, "Conteo" = 1, "Porcentaje" = 1, " " = 1)) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, border_right = TRUE) %>%
+  column_spec(3, background = "lightblue")
+
+
+
+# Agregar el símbolo de % a las columnas de porcentaje
+tabla_final_unificada$Porcentaje_GBA <- paste0(tabla_final_unificada$Porcentaje_GBA, "%")
+tabla_final_unificada$Porcentaje_NORO <- paste0(tabla_final_unificada$Porcentaje_NORO, "%")
+tabla_final_unificada$Porcentaje_NORE <- paste0(tabla_final_unificada$Porcentaje_NORE, "%")
+tabla_final_unificada$Porcentaje_CUYO <- paste0(tabla_final_unificada$Porcentaje_CUYO, "%")
+tabla_final_unificada$Porcentaje_PAMPA <- paste0(tabla_final_unificada$Porcentaje_PAMPA, "%")
+tabla_final_unificada$Porcentaje_PATAG <- paste0(tabla_final_unificada$Porcentaje_PATAG, "%")
+
+# Crear la tabla utilizando kable
+library(kableExtra)
+
+# Visualizar la tabla con el encabezado deseado y los colores diferenciados
+tabla_final_unificada %>%
+  kable("html", escape = FALSE, caption = "Resumen de Datos por Región y Categoría", col.names = c("", rep("", 12))) %>%
+  kable_styling("striped", full_width = F, font_size = 18) %>%  # Aumentar tamaño de fuente
+  add_header_above(c("Categoria" = 1, 
+                     "GBA" = 2, 
+                     "NORO" = 2, 
+                     "NORE" = 2, 
+                     "CUYO" = 2, 
+                     "PAMPA" = 2, 
+                     "PATAG" = 2)) %>%
+  column_spec(1, bold = TRUE, width = "5em") %>%  # Dar más espacio a la columna de categoría
+  column_spec(c(2, 4, 6, 8, 10, 12), background = "white") %>%  # Color blanco para las columnas de conteo
+  column_spec(c(3, 5, 7, 9, 11, 13), background = "lightblue") %>%  # Color celeste para las columnas de porcentaje
+  row_spec(0, bold = TRUE, font_size = 18) %>%  # Aumentar el tamaño de las filas
+  row_spec(1:nrow(tabla_final_unificada), extra_css = "border-bottom: 2px solid black;")  # Línea negra en la parte inferior de cada fila
+
+
+
+
+
+## PUNTO 2 ##
+
+
+library(readr)
+library(tidyverse)
+library(dplyr)
+
+# IMPORTAR TABLAS #
+
+datos2024individual <- usu_individual_T124
+datos2024hogar <- usu_hogar_T124
+
+# FILTRAR DATOS#
+datos2024individualGBA <- datos2024individual[datos2024individual$REGION == 01, ]
+datos2024individualNORO <- datos2024individual[datos2024individual$REGION == 40, ]
+datos2024individualNORE <- datos2024individual[datos2024individual$REGION == 41, ]
+datos2024individualCUYO <- datos2024individual[datos2024individual$REGION == 42, ]
+datos2024individualPAMPA <- datos2024individual[datos2024individual$REGION == 43, ]
+datos2024individualPATAG <- datos2024individual[datos2024individual$REGION == 44, ]
+
+
+## PUNTO 2 ##
+
+# PATAGONIA #
+
+# FILTRO UNICAMENTE A LOS QUE TENGAN ENTRE 18 Y 65 AÑOS #
+
+# Filtrar las personas entre 18 y 65 años
+
+datos_18_65_PATAG <- datos2024individualPATAG %>%
+  filter(CH06 >= 18 & CH06 <= 65)
+
+# Tasa de actividad #
+
+# Calcular el número de individuos que están activos (ESTADO = 1 o ESTADO = 2)
+individuos_activosPATAG <- sum(datos_18_65_PATAG$ESTADO %in% c(1, 2))
+
+# Calcular el total de individuos en el dataframe
+total_individuosPATAG <- nrow(datos_18_65_PATAG)
+
+# Calcular el porcentaje de tasa de actividad
+tasa_actividadPATAG <- (individuos_activosPATAG / total_individuosPATAG) * 100
+
+# Mostrar el porcentaje de tasa de actividad
+tasa_actividadPATAG
+
+
+# Tasa de Empleo #
+
+individuos_empleadosPATAG <- sum(datos_18_65_PATAG$ESTADO %in% c(1))
+
+tasa_empleoPATAG <- (individuos_empleadosPATAG / total_individuosPATAG) * 100
+
+tasa_empleoPATAG
+
+# Tasa de desempleo #
+
+individuos_desempleadosPATAG <- sum(datos_18_65_PATAG$ESTADO %in% c(2))
+
+tasa_desempleoPATAG <- (individuos_desempleadosPATAG / individuos_activosPATAG) * 100
+
+tasa_desempleoPATAG
+
+
+
+## GBA ##
+
+
+# FILTRO UNICAMENTE A LOS QUE TENGAN ENTRE 18 Y 65 AÑOS #
+
+# Filtrar las personas entre 18 y 65 años
+datos_18_65_GBA <- datos2024individualGBA %>% 
+  filter(CH06 >= 18 & CH06 <= 65)
+
+# Tasa de actividad #
+
+# Calcular el número de individuos que están activos (ESTADO = 1 o ESTADO = 2)
+individuos_activosGBA <- sum(datos_18_65_GBA$ESTADO %in% c(1, 2))
+
+# Calcular el total de individuos en el dataframe
+total_individuosGBA <- nrow(datos_18_65_GBA)
+
+# Calcular el porcentaje de tasa de actividad
+tasa_actividadGBA <- (individuos_activosGBA / total_individuosGBA) * 100
+
+# Mostrar el porcentaje de tasa de actividad
+tasa_actividadGBA
+
+
+# Tasa de Empleo #
+
+individuos_empleadosGBA <- sum(datos_18_65_GBA$ESTADO %in% c(1))
+
+tasa_empleoGBA <- (individuos_empleadosGBA / total_individuosGBA) * 100
+
+tasa_empleoGBA
+
+# Tasa de desempleo #
+
+individuos_desempleadosGBA <- sum(datos_18_65_GBA$ESTADO %in% c(2))
+
+tasa_desempleoGBA <- (individuos_desempleadosGBA / individuos_activosGBA) * 100
+
+tasa_desempleoGBA
+
+
+## NORO ##
+
+
+# FILTRO UNICAMENTE A LOS QUE TENGAN ENTRE 18 Y 65 AÑOS #
+
+# Filtrar las personas entre 18 y 65 años
+datos_18_65_NORO <- datos2024individualNORO %>%
+  filter(CH06 >= 18 & CH06 <= 65)
+
+# Tasa de actividad #
+
+# Calcular el número de individuos que están activos (ESTADO = 1 o ESTADO = 2)
+individuos_activosNORO <- sum(datos_18_65_NORO$ESTADO %in% c(1, 2))
+
+# Calcular el total de individuos en el dataframe
+total_individuosNORO <- nrow(datos_18_65_NORO)
+
+# Calcular el porcentaje de tasa de actividad
+tasa_actividadNORO <- (individuos_activosNORO / total_individuosNORO) * 100
+
+# Mostrar el porcentaje de tasa de actividad
+tasa_actividadNORO
+
+
+# Tasa de Empleo #
+
+individuos_empleadosNORO <- sum(datos_18_65_NORO$ESTADO %in% c(1))
+
+tasa_empleoNORO <- (individuos_empleadosNORO / total_individuosNORO) * 100
+
+tasa_empleoNORO
+
+# Tasa de desempleo #
+
+individuos_desempleadosNORO <- sum(datos_18_65_NORO$ESTADO %in% c(2))
+
+tasa_desempleoNORO <- (individuos_desempleadosNORO / individuos_activosNORO) * 100
+
+tasa_desempleoNORO
+
+
+## NORE ##
+
+# FILTRO UNICAMENTE A LOS QUE TENGAN ENTRE 18 Y 65 AÑOS #
+
+# Filtrar las personas entre 18 y 65 años
+datos_18_65_NORE <- datos2024individualNORE %>%
+  filter(CH06 >= 18 & CH06 <= 65)
+
+# Tasa de actividad #
+
+# Calcular el número de individuos que están activos (ESTADO = 1 o ESTADO = 2)
+individuos_activosNORE <- sum(datos_18_65_NORE$ESTADO %in% c(1, 2))
+
+# Calcular el total de individuos en el dataframe
+total_individuosNORE <- nrow(datos_18_65_NORE)
+
+# Calcular el porcentaje de tasa de actividad
+tasa_actividadNORE <- (individuos_activosNORE / total_individuosNORE) * 100
+
+# Mostrar el porcentaje de tasa de actividad
+tasa_actividadNORE
+
+
+# Tasa de Empleo #
+
+individuos_empleadosNORE <- sum(datos_18_65_NORE$ESTADO %in% c(1))
+
+tasa_empleoNORE <- (individuos_empleadosNORE / total_individuosNORE) * 100
+
+tasa_empleoNORE
+
+# Tasa de desempleo #
+
+individuos_desempleadosNORE <- sum(datos_18_65_NORE$ESTADO %in% c(2))
+
+tasa_desempleoNORE <- (individuos_desempleadosNORE / individuos_activosNORE) * 100
+
+tasa_desempleoNORE
+
+
+## CUYO ##
+
+# FILTRO UNICAMENTE A LOS QUE TENGAN ENTRE 18 Y 65 AÑOS #
+
+# Filtrar las personas entre 18 y 65 años
+datos_18_65_CUYO <- datos2024individualCUYO %>%
+  filter(CH06 >= 18 & CH06 <= 65)
+
+# Tasa de actividad #
+
+# Calcular el número de individuos que están activos (ESTADO = 1 o ESTADO = 2)
+individuos_activosCUYO <- sum(datos_18_65_CUYO$ESTADO %in% c(1, 2))
+
+# Calcular el total de individuos en el dataframe
+total_individuosCUYO <- nrow(datos_18_65_CUYO)
+
+# Calcular el porcentaje de tasa de actividad
+tasa_actividadCUYO <- (individuos_activosCUYO / total_individuosCUYO) * 100
+
+# Mostrar el porcentaje de tasa de actividad
+tasa_actividadCUYO
+
+
+# Tasa de Empleo #
+
+individuos_empleadosCUYO <- sum(datos_18_65_CUYO$ESTADO %in% c(1))
+
+tasa_empleoCUYO <- (individuos_empleadosCUYO / total_individuosCUYO) * 100
+
+tasa_empleoCUYO
+
+# Tasa de desempleo #
+
+individuos_desempleadosCUYO <- sum(datos_18_65_CUYO$ESTADO %in% c(2))
+
+tasa_desempleoCUYO <- (individuos_desempleadosCUYO / individuos_activosCUYO) * 100
+
+tasa_desempleoCUYO
+
+
+## PAMPA ##
+
+# FILTRO UNICAMENTE A LOS QUE TENGAN ENTRE 18 Y 65 AÑOS #
+
+# Filtrar las personas entre 18 y 65 años
+datos_18_65_PAMPA <- datos2024individualPAMPA %>%
+  filter(CH06 >= 18 & CH06 <= 65)
+
+# Tasa de actividad #
+
+# Calcular el número de individuos que están activos (ESTADO = 1 o ESTADO = 2)
+individuos_activosPAMPA <- sum(datos_18_65_PAMPA$ESTADO %in% c(1, 2))
+
+# Calcular el total de individuos en el dataframe
+total_individuosPAMPA <- nrow(datos_18_65_PAMPA)
+
+# Calcular el porcentaje de tasa de actividad
+tasa_actividadPAMPA <- (individuos_activosPAMPA / total_individuosPAMPA) * 100
+
+# Mostrar el porcentaje de tasa de actividad
+tasa_actividadPAMPA
+
+
+# Tasa de Empleo #
+
+individuos_empleadosPAMPA <- sum(datos_18_65_PAMPA$ESTADO %in% c(1))
+
+tasa_empleoPAMPA <- (individuos_empleadosPAMPA / total_individuosPAMPA) * 100
+
+tasa_empleoPAMPA
+
+# Tasa de desempleo #
+
+individuos_desempleadosPAMPA <- sum(datos_18_65_PAMPA$ESTADO %in% c(2))
+
+tasa_desempleoPAMPA <- (individuos_desempleadosPAMPA / individuos_activosPAMPA) * 100
+
+tasa_desempleoPAMPA
+
+
+## CREAR TABLAS ##
+# PATAG #
+
+# Crear un dataframe con las tasas calculadas
+tabla_tasas_PATAG <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  PATAG = c(tasa_actividadPATAG, tasa_empleoPATAG, tasa_desempleoPATAG)
+)
+
+# Crear la tabla utilizando kableExtra
+library(kableExtra)
+
+# Visualizar la tabla tipo Excel con kableExtra
+tabla_tasas_PATAG %>%
+  kable("html", col.names = c("Categoria", "PATAG"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2, background = "lightblue") %>%
+  add_header_above(c(" " = 1, "PATAG" = 1)) %>%
+  row_spec(0, bold = TRUE)
+
+# GBA #
+
+# Crear un dataframe con las tasas calculadas
+tabla_tasas_GBA <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  GBA = c(tasa_actividadGBA, tasa_empleoGBA, tasa_desempleoGBA)
+)
+
+
+# Visualizar la tabla tipo Excel con kableExtra
+tabla_tasas_GBA %>%
+  kable("html", col.names = c("Categoria", "GBA"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2, background = "lightblue") %>%
+  add_header_above(c(" " = 1, "GBA" = 1)) %>%
+  row_spec(0, bold = TRUE)
+
+
+# NORO #
+
+# Crear un dataframe con las tasas calculadas
+tabla_tasas_NORO <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  NORO = c(tasa_actividadNORO, tasa_empleoNORO, tasa_desempleoNORO)
+)
+
+
+# Visualizar la tabla tipo Excel con kableExtra
+tabla_tasas_NORO %>%
+  kable("html", col.names = c("Categoria", "NORO"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2, background = "lightblue") %>%
+  add_header_above(c(" " = 1, "NORO" = 1)) %>%
+  row_spec(0, bold = TRUE)
+
+
+# NORE #
+
+# Crear un dataframe con las tasas calculadas
+tabla_tasas_NORE <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  NORE = c(tasa_actividadNORE, tasa_empleoNORE, tasa_desempleoNORE)
+)
+
+
+# Visualizar la tabla tipo Excel con kableExtra
+tabla_tasas_NORE %>%
+  kable("html", col.names = c("Categoria", "NORE"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2, background = "lightblue") %>%
+  add_header_above(c(" " = 1, "NORE" = 1)) %>%
+  row_spec(0, bold = TRUE)
+
+
+# CUYO #
+
+# Crear un dataframe con las tasas calculadas
+tabla_tasas_CUYO <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  CUYO = c(tasa_actividadCUYO, tasa_empleoCUYO, tasa_desempleoCUYO)
+)
+
+
+# Visualizar la tabla tipo Excel con kableExtra
+tabla_tasas_CUYO %>%
+  kable("html", col.names = c("Categoria", "CUYO"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2, background = "lightblue") %>%
+  add_header_above(c(" " = 1, "CUYO" = 1)) %>%
+  row_spec(0, bold = TRUE)
+
+
+# PAMPA #
+
+# Crear un dataframe con las tasas calculadas
+tabla_tasas_PAMPA <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  PAMPA = c(tasa_actividadPAMPA, tasa_empleoPAMPA, tasa_desempleoPAMPA)
+)
+
+
+# Visualizar la tabla tipo Excel con kableExtra
+tabla_tasas_PAMPA %>%
+  kable("html", col.names = c("Categoria", "PAMPA"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2, background = "lightblue") %>%
+  add_header_above(c(" " = 1, "PAMPA" = 1)) %>%
+  row_spec(0, bold = TRUE)
+
+
+## COMBINAR TABLAS ##
+
+#####
+
+# Crear un dataframe unificado con todas las tablas de tasas
+tabla_tasas_unificada <- data.frame(
+  Categoria = c("TASA ACTIVIDAD", "TASA EMPLEO", "TASA DESEMPLEO"),
+  GBA = sprintf("%.2f%%", c(tasa_actividadGBA, tasa_empleoGBA, tasa_desempleoGBA)),
+  NORO = sprintf("%.2f%%", c(tasa_actividadNORO, tasa_empleoNORO, tasa_desempleoNORO)),
+  NORE = sprintf("%.2f%%", c(tasa_actividadNORE, tasa_empleoNORE, tasa_desempleoNORE)),
+  CUYO = sprintf("%.2f%%", c(tasa_actividadCUYO, tasa_empleoCUYO, tasa_desempleoCUYO)),
+  PAMPA = sprintf("%.2f%%", c(tasa_actividadPAMPA, tasa_empleoPAMPA, tasa_desempleoPAMPA)),
+  PATAG = sprintf("%.2f%%", c(tasa_actividadPATAG, tasa_empleoPATAG, tasa_desempleoPATAG))
+)
+
+# Crear la tabla unificada utilizando kableExtra
+library(kableExtra)
+
+# Visualizar la tabla unificada
+tabla_tasas_unificada %>%
+  kable("html", col.names = c("Categoria", "GBA", "NORO", "NORE", "CUYO", "PAMPA", "PATAG"), align = "c") %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(2:7, background = "lightblue") %>%
+  row_spec(0, bold = TRUE) %>%
+  add_header_above(c(" " = 1, "Regiones" = 6)) 
+
+
+
+## PUNTO 3 ##
+
+
+
+# FUNCION DE DISTRIBUCION PER CAPITA #
+
+# INGRESO PER CAPITA FAMILIAR DE PATAGONIA
+
+IPCF_PATAG <- datos2024individual %>%
+  select(REGION,IPCF,PONDIH) %>% filter(REGION == 44)
+
+# LIMPIEZA #
+
+IPCF_PATAG$IPCF <- as.numeric(sub(",", ".", IPCF_PATAG$IPCF, fixed = TRUE))
+
+# ORDENO POR IPCF #
+
+IPCF_PATAG <- IPCF_PATAG[with(IPCF_PATAG, order(IPCF_PATAG$IPCF)),]
+
+# Suma y porcentaje de la poblacion #
+
+IPCF_PATAG <- IPCF_PATAG %>% mutate(sumapob = cumsum(PONDIH))
+
+IPCF_PATAG <- IPCF_PATAG %>% mutate(shrpob = sumapob/sumapob[5527])
+
+# SACO AL 5% MAS RICO
+
+IPCF_PATAG <- IPCF_PATAG %>% filter(shrpob <= 0.95)  
+
+# GRAFICO LA DISTRIBUCION ACUMULADA #
+
+ggplot(IPCF_PATAG, aes(IPCF,shrpob)) + geom_line() + labs(title = "Distribucion acumulada patagonia", x = "Ingreso per capita familiar", y = "Porcentaje de la poblacion")
+
+# CURVA DE PEN #
+
+ggplot(IPCF_PATAG, aes(shrpob,IPCF)) + geom_line() + labs(title = "Curva de Pen patagonia", x = "Porcentaje de la poblacion", y = "Ingreso per capita familiar")
+
+
+# Histograma suavizado y comparacion #
+
+IPCF_CUYO <- datos2024individual %>%
+  select(REGION,IPCF,PONDIH) %>% filter(REGION == 42)
+
+IPCF_CUYO$IPCF <- as.numeric(sub(",", ".", IPCF_CUYO$IPCF, fixed = TRUE))
+
+# Vuelvo a obtener los datos de la patagonia sin excluir al 5%
+
+IPCF_PATAG_2 <- datos2024individual %>%
+  select(REGION,IPCF,PONDIH) %>% filter(REGION == 44)
+
+IPCF_PATAG_2$IPCF <- as.numeric(sub(",", ".", IPCF_PATAG_2$IPCF, fixed = TRUE))
+
+# Tomo logaritmos del IPCF y estimo la densidad por kernel #
+
+lncuyo = log(IPCF_CUYO$IPCF)
+lnpatag = log(IPCF_PATAG_2$IPCF)
+denscuyo = density(lncuyo)
+denspatag = density(lnpatag)
+
+# CREAR HISTOGRAMA SUAVIZADO DUAL #
+
+plot(denscuyo,main = "Histograma suavizado Patagonia vs Cuyo", xlab = "Logaritmo del IPCF", ylab = "Densidad de probabilidad estimada", col="blue")
+lines(denspatag, col="green")
+legend("topright", pch=1, col = c("blue", "green"), legend = c("Cuyo", "Patagonia"))
+
+
+
+## PUNTO 4 ##
+
+
+
+#ordenado por IPCF#
+IPCF_PATAG_2 <- IPCF_PATAG_2[with(IPCF_PATAG_2, order(IPCF_PATAG_2$IPCF)),]
+
+#generar sumapob y shrpob PATAG2#
+IPCF_PATAG_2 <- IPCF_PATAG_2 %>% mutate(sumapob = cumsum(PONDIH))
+IPCF_PATAG_2 <- IPCF_PATAG_2 %>% mutate(shrpob = sumapob / last(sumapob))
+
+#ordenar IPCF de menor a mayor#
+sort(IPCF_PATAG_2$IPCF)
+
+#generar sumaing y shring PATAG2#
+IPCF_PATAG_2 <- IPCF_PATAG_2 %>% mutate(sumaing = cumsum(IPCF * PONDIH))
+IPCF_PATAG_2 <- IPCF_PATAG_2 %>% mutate(shring = sumaing / last(sumaing))
+
+#graficar curva de Lorenz PATAG2#
+ggplot(IPCF_PATAG_2, aes(x = shrpob, y = shring)) +  
+  geom_line() +  
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = "Curva de Lorenz Patagonia", x = "shrpob", y = "shring")
+
+#ingreso per cápita familiar de Gran Buenos Aires#
+IPCF_GBA <- datos2024individual %>%
+  select(REGION,IPCF,PONDIH) %>%
+  filter(REGION == 01)
+
+#limpieza#
+IPCF_GBA$IPCF <- as.numeric(sub(",", ".", IPCF_GBA$IPCF, fixed = TRUE))
+
+#ordenado por IPCF#
+IPCF_GBA <- IPCF_GBA[with(IPCF_GBA, order(IPCF_GBA$IPCF)),]
+IPCF_CUYO <- IPCF_CUYO[with(IPCF_CUYO, order(IPCF_CUYO$IPCF)),]
+
+#generar sumapob y shrpob CUYO#
+IPCF_CUYO <- IPCF_CUYO %>% mutate(sumapob = cumsum(PONDIH))
+IPCF_CUYO <- IPCF_CUYO %>% mutate(shrpob = sumapob / last(sumapob))
+
+#ordenar IPCF de menor a mayor CUYO#
+sort(IPCF_CUYO$IPCF)
+
+#generar sumaing y shring CUYO#
+IPCF_CUYO <- IPCF_CUYO %>% mutate(sumaing = cumsum(IPCF * PONDIH))
+IPCF_CUYO <- IPCF_CUYO %>% mutate(shring = sumaing / last(sumaing))
+
+#generar sumapob y shrpob GBA#
+IPCF_GBA <- IPCF_GBA %>% mutate(sumapob = cumsum(PONDIH))
+IPCF_GBA <- IPCF_GBA %>% mutate(shrpob = sumapob / last(sumapob))
+
+#ordenar IPCF de menor a mayor GBA#
+sort(IPCF_GBA$IPCF)
+
+#generar sumaing y shring GBA#
+IPCF_GBA <- IPCF_GBA %>% mutate(sumaing = cumsum(IPCF * PONDIH))
+IPCF_GBA <- IPCF_GBA %>% mutate(shring = sumaing / last(sumaing))
+
+#combinar los datos CUYO GBA PATAG#
+IPCF_GBA$Region <- "Gran Buenos Aires"
+IPCF_CUYO$Region <- "Cuyo"
+IPCF_PATAG_2$Region <- "Patagonia"
+datos_combinados <- rbind(IPCF_GBA, IPCF_CUYO, IPCF_PATAG_2)
+
+#graficar curva de Lorenz CUYO GBA PATAG#
+ggplot(datos_combinados, aes(x = shrpob, y = shring, color = Region)) +  
+  geom_line(linewidth = 1) +  
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +  
+  labs(
+    title = "Curvas de Lorenz por Región",
+    x = "Proporción de la Población (shrpob)",
+    y = "Proporción del Ingreso (shring)"
+  ) +  
+  theme_minimal() +  
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12)
+  )
+
+
+
+## PUNTO 5 ##
+
+
+#Instalamos paquete "ineq"#
+install.packages("ineq")
+library(ineq)
+
+#Calculamos coeficiente de gini region por region#
+
+#Gini de Patagonia#
+gini_patagonia_ipcf <- Gini(IPCF_PATAG$IPCF)
+gini_patagonia_ingreso_total <- Gini(IPCF_PATAG_2$IPCF * IPCF_PATAG_2$PONDIH)
+
+#Imprimimos resultados patagonia#
+gini_patagonia_ipcf
+gini_patagonia_ingreso_total
+
+#Gini de Cuyo#
+gini_cuyo_ipcf <- Gini(IPCF_CUYO$IPCF)
+gini_cuyo_ingreso_total <- Gini(IPCF_CUYO$IPCF * IPCF_CUYO$PONDIH)
+
+#Imprimimos resultados cuyo#
+gini_cuyo_ipcf
+gini_cuyo_ingreso_total
+
+#Gini de Gran Buenos Aires#
+gini_gba_ipcf <- Gini(IPCF_GBA$IPCF)
+gini_gba_ingreso_total <- Gini(IPCF_GBA$IPCF * IPCF_GBA$PONDIH)
+
+#Imprimimos resultados gran buenos aires#
+gini_gba_ipcf
+gini_gba_ingreso_total
